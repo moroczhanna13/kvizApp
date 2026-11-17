@@ -1,41 +1,29 @@
 import { useEffect, useState } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
+
+//használata: QuizProvider-ben, a beállítások és a ranglista mentésére
 
 /**
- * Egy localStorage-ban (JSON-ként) megőrzött állapotot kezelő hook.
- * Hibás vagy hiányzó tárolt értéknél, illetve elérhetetlen localStorage esetén
- * az alapértelmezett értéket használja, kivételt nem dob.
+ * Olyan állapot, ami localStorage-ba is mentődik, így újratöltés után is megmarad.
  * @param key - A localStorage kulcs.
- * @param defaultValue - Az alapértelmezett érték.
- * @param isValid - Opcionális ellenőrző függvény a beolvasott érték alakjára.
- * @returns Az aktuális érték és a beállító függvény, mint a useState-nél.
+ * @param defaultValue - Ezt használjuk, ha még nincs mentett érték.
+ * @returns Az érték és a beállító függvény, ugyanúgy mint a useState-nél.
  */
-export function useLocalStorage<T>(
-  key: string,
-  defaultValue: T,
-  isValid?: (value: unknown) => value is T,
-): [T, Dispatch<SetStateAction<T>>] {
-  // Lusta kezdőérték: a localStorage-ot csak az első rendereléskor olvassuk
+export function useLocalStorage<T>(key: string, defaultValue: T) {
   const [value, setValue] = useState<T>(() => {
+    const saved = localStorage.getItem(key);
+    if (saved === null) return defaultValue;
     try {
-      const stored = window.localStorage.getItem(key);
-      if (stored === null) return defaultValue;
-      const parsed: unknown = JSON.parse(stored);
-      if (isValid && !isValid(parsed)) return defaultValue;
-      return parsed as T;
+      return JSON.parse(saved);
     } catch {
+      // Ha valami rossz van elmentve, az alapértéket használjuk
       return defaultValue;
     }
   });
 
-  // Minden változáskor visszaírjuk az értéket; a tárhely megtelése vagy tiltása nem okozhat hibát
+  // Minden változásnál elmentjük az új értéket
   useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-      // A localStorage nem elérhető (pl. privát mód) – az alkalmazás tárolás nélkül is működik
-    }
+    localStorage.setItem(key, JSON.stringify(value));
   }, [key, value]);
 
-  return [value, setValue];
+  return [value, setValue] as const;
 }

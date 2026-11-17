@@ -1,50 +1,24 @@
-import { useCallback, useRef } from 'react';
-
-/** A useSoundEffects hook visszatérési értéke. */
-export interface SoundEffects {
-  /** A helyes válasz hangjának lejátszása. */
-  playCorrect: () => void;
-  /** A helytelen válasz hangjának lejátszása. */
-  playWrong: () => void;
-}
-
-/** A hangfájlok elérési útja a public mappán belül. */
-const SOUND_URLS = {
-  correct: `${import.meta.env.BASE_URL}sounds/correct.wav`,
-  wrong: `${import.meta.env.BASE_URL}sounds/wrong.wav`,
-} as const;
+import { useRef } from 'react';
 
 /**
- * Hangeffektek lejátszása HTMLAudioElement segítségével. Az Audio objektumok
- * ref-ben tárolódnak, és csak az első lejátszáskor jönnek létre.
- * @param enabled - Engedélyezettek-e a hangok.
- * @returns A hangokat lejátszó függvények.
+ * Hangok lejátszása helyes és rossz válasznál (Audio API).
+ * @param enabled - Be van-e kapcsolva a hang.
+ * @returns A két lejátszó függvény.
  */
-export function useSoundEffects(enabled: boolean): SoundEffects {
-  const audioRef = useRef<Partial<Record<keyof typeof SOUND_URLS, HTMLAudioElement>>>({});
+export function useSoundEffects(enabled: boolean) {
+  // Ref-ben tároljuk, hogy ne jöjjön létre minden rendernél új lejátszó
+  const correctSound = useRef(new Audio('/sounds/correct.wav'));
+  const wrongSound = useRef(new Audio('/sounds/wrong.wav'));
 
-  const play = useCallback(
-    (name: keyof typeof SOUND_URLS) => {
-      if (!enabled) return;
-      try {
-        let audio = audioRef.current[name];
-        if (!audio) {
-          audio = new Audio(SOUND_URLS[name]);
-          audioRef.current[name] = audio;
-        }
-        // Elölről indítjuk, ha az előző lejátszás még tartana
-        audio.currentTime = 0;
-        // A play() Promise-t ad; a böngésző autoplay-tiltása esetén csendben elnyeljük a hibát
-        void audio.play().catch(() => undefined);
-      } catch {
-        // Az Audio API nem elérhető – a játék hang nélkül folytatódik
-      }
-    },
-    [enabled],
-  );
+  function play(audio: HTMLAudioElement) {
+    if (!enabled) return;
+    audio.currentTime = 0;
+    // A böngésző néha letiltja a lejátszást, ilyenkor nem csinálunk semmit
+    audio.play().catch(() => {});
+  }
 
-  const playCorrect = useCallback(() => play('correct'), [play]);
-  const playWrong = useCallback(() => play('wrong'), [play]);
-
-  return { playCorrect, playWrong };
+  return {
+    playCorrect: () => play(correctSound.current),
+    playWrong: () => play(wrongSound.current),
+  };
 }

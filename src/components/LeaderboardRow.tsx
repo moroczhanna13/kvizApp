@@ -1,44 +1,39 @@
-import { memo } from 'react';
 import Chip from '@mui/material/Chip';
 import TableCell from '@mui/material/TableCell';
 import TableRow from '@mui/material/TableRow';
 import type { LeaderboardEntry } from '../types/quiz';
 import { DIFFICULTY_LABELS } from '../utils/constants';
-import { calculatePercentage, formatDate } from '../utils/scoring';
 
-/** A LeaderboardRow tulajdonságai. */
-export interface LeaderboardRowProps {
-  /** A megjelenítendő eredmény. */
+/** A LeaderboardRow props-a. */
+export type LeaderboardRowProps = {
   entry: LeaderboardEntry;
-  /** A helyezés (1-től számozva). */
+  /** Helyezés, 1-től számozva. */
   rank: number;
-}
+};
 
-/** Kis kijelzőn elrejtett cellák stílusa. */
-const hideOnXs = { display: { xs: 'none', sm: 'table-cell' } } as const;
-
-/** Közepes kijelzőnél kisebben elrejtett cellák stílusa. */
-const hideBelowMd = { display: { xs: 'none', md: 'table-cell' } } as const;
+/** Mobilon elrejtett cella stílusa. */
+const hideOnMobile = { display: { xs: 'none', sm: 'table-cell' } };
 
 /**
  * A ranglista egy sora.
- * @param props - A komponens tulajdonságai.
+ * @param props - Az eredmény és a helyezés.
  * @returns Egy táblázatsor.
  */
-export const LeaderboardRow = memo(function LeaderboardRow({ entry, rank }: LeaderboardRowProps) {
-  const percent = calculatePercentage(entry.correctCount, entry.total);
+export function LeaderboardRow({ entry, rank }: LeaderboardRowProps) {
+  const percent = Math.round((entry.correctCount / entry.total) * 100);
+
   return (
     <TableRow hover>
-      <TableCell sx={{ fontWeight: rank <= 3 ? 700 : 400 }}>{rank}.</TableCell>
+      <TableCell>{rank}.</TableCell>
       <TableCell sx={{ fontWeight: 700 }}>{entry.score}</TableCell>
       <TableCell>
-        {entry.correctCount} / {entry.total} <span aria-hidden="true">·</span> {percent}%
+        {entry.correctCount} / {entry.total} ({percent}%)
       </TableCell>
-      <TableCell sx={hideOnXs}>{entry.categoryName}</TableCell>
-      <TableCell sx={hideOnXs}>
+      <TableCell sx={hideOnMobile}>{entry.categoryName}</TableCell>
+      <TableCell sx={hideOnMobile}>
         <Chip label={DIFFICULTY_LABELS[entry.difficulty]} size="small" />
       </TableCell>
-      <TableCell sx={hideBelowMd}>{formatDate(entry.date)}</TableCell>
+      <TableCell sx={hideOnMobile}>{new Date(entry.date).toLocaleString('hu-HU')}</TableCell>
     </TableRow>
   );
-});
+}

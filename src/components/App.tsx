@@ -8,20 +8,26 @@ import { useCategories } from '../hooks/useCategories';
 import { useQuiz } from '../hooks/useQuiz';
 
 /**
- * Az alkalmazás gyökérkomponense: navigációs sáv és az aktuális nézet.
- * A kategóriák itt töltődnek be, így nézetváltáskor nem kell újra lekérni őket
- * (ez a szigorú rate limit miatt is fontos).
- * @returns Az alkalmazás felülete.
+ * A fő komponens: navigációs sáv és az éppen aktív képernyő.
+ * A témaköröket itt töltjük be, hogy képernyőváltáskor ne kelljen újra lekérni őket.
+ * @returns Az alkalmazás.
  */
 export function App() {
   const { view } = useQuiz();
-  const categoriesState = useCategories();
+  const categories = useCategories();
 
   return (
     <>
       <NavBar />
-      <Container component="main" maxWidth="md" sx={{ py: { xs: 2, sm: 4 } }}>
-        {view === 'start' && <StartScreen categoriesState={categoriesState} />}
+      <Container component="main" maxWidth="md" sx={{ py: 3 }}>
+        {view === 'start' && (
+          <StartScreen
+            categories={categories.categories}
+            categoriesLoading={categories.loading}
+            categoriesError={categories.error}
+            onRetry={categories.retry}
+          />
+        )}
         {view === 'quiz' && <QuizScreen />}
         {view === 'result' && <ResultScreen />}
         {view === 'leaderboard' && <Leaderboard />}

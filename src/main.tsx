@@ -6,12 +6,7 @@ import { App } from './components/App';
 import { QuizProvider } from './context/QuizProvider';
 import { theme } from './utils/theme';
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error('Hiányzik a #root elem az index.html-ből.');
-}
-
-createRoot(rootElement).render(
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />

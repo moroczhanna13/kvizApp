@@ -4,12 +4,12 @@ import { createTheme } from '@mui/material/styles';
 export const theme = createTheme({
   palette: {
     mode: 'light',
-    primary: { main: '#3949ab' },
+    primary: { main: '#d81b60' },
     secondary: { main: '#00897b' },
-    success: { main: '#2e7d32' },
-    error: { main: '#c62828' },
-    warning: { main: '#ed6c02' },
-    background: { default: '#f3f4f9', paper: '#ffffff' },
+    success: { main: '#6fd274' },
+    error: { main: '#e96868' },
+    warning: { main: '#f09245' },
+    background: { default: '#ffcee0', paper: '#ffffff' },
   },
   shape: { borderRadius: 12 },
   typography: {

@@ -1,9 +1,7 @@
-import { useCallback } from 'react';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardActions from '@mui/material/CardActions';
 import CardContent from '@mui/material/CardContent';
-import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -14,43 +12,32 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { QuestionCountSelect } from './QuestionCountSelect';
 import { useQuestions } from '../hooks/useQuestions';
 import { useQuiz } from '../hooks/useQuiz';
-import type { UseCategoriesResult } from '../hooks/useCategories';
-import type { Difficulty, Question } from '../types/quiz';
+import type { Category } from '../types/quiz';
 import { QUESTION_TIME_LIMIT } from '../utils/constants';
 
-/** A StartScreen tulajdonságai. */
-export interface StartScreenProps {
-  /** A kategóriák betöltésének állapota (a useCategories hook eredménye). */
-  categoriesState: UseCategoriesResult;
-}
+/** A StartScreen props-a: a témakörök betöltésének állapota az App-ból. */
+export type StartScreenProps = {
+  categories: Category[];
+  categoriesLoading: boolean;
+  categoriesError: string;
+  onRetry: () => void;
+};
 
 /**
- * Kezdőképernyő: témakör, nehézség és kérdésszám választása, majd a játék indítása.
- * @param props - A komponens tulajdonságai.
- * @returns A beállító kártya.
+ * Kezdőképernyő: témakör, nehézség és kérdésszám kiválasztása, majd a játék indítása.
+ * @param props - A témakörök és azok betöltési állapota.
+ * @returns A kezdőképernyő.
  */
-export function StartScreen({ categoriesState }: StartScreenProps) {
-  const { settings, updateSettings, dispatch, setView } = useQuiz();
-  const { categories, loading: categoriesLoading, error: categoriesError, retry } = categoriesState;
+export function StartScreen({ categories, categoriesLoading, categoriesError, onRetry }: StartScreenProps) {
+  const { settings, updateSettings, startQuiz } = useQuiz();
+  const { loading, error, load } = useQuestions();
 
-  // Sikeres lekérés után indul a játék és vált a nézet
-  const handleLoaded = useCallback(
-    (questions: Question[]) => {
-      dispatch({ type: 'START', questions });
-      setView('quiz');
-    },
-    [dispatch, setView],
-  );
-
-  const { loading, error, load } = useQuestions(handleLoaded);
-
-  const handleCategoryChange = useCallback((categoryId: number) => updateSettings({ categoryId }), [updateSettings]);
-  const handleDifficultyChange = useCallback((difficulty: Difficulty) => updateSettings({ difficulty }), [updateSettings]);
-  const handleAmountChange = useCallback((amount: number) => updateSettings({ amount }), [updateSettings]);
-  const handleStart = useCallback(() => load(settings), [load, settings]);
-
-  const categoryValid = categories.some((c) => c.id === settings.categoryId);
-  const canStart = !loading && !categoriesLoading && !categoriesError && categoryValid;
+  async function handleStart() {
+    const questions = await load(settings);
+    if (questions) {
+      startQuiz(questions);
+    }
+  }
 
   return (
     <Card>
@@ -65,35 +52,39 @@ export function StartScreen({ categoriesState }: StartScreenProps) {
             </Typography>
           </div>
 
-          {categoriesLoading && <LoadingSpinner label="Témakörök betöltése…" />}
-          {categoriesError && <ErrorMessage kind={categoriesError} onRetry={retry} />}
+          {categoriesLoading && <LoadingSpinner label="Témakörök betöltése..." />}
+          {categoriesError && <ErrorMessage message={categoriesError} onRetry={onRetry} />}
 
           {!categoriesLoading && !categoriesError && (
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <CategorySelect
                 categories={categories}
                 value={settings.categoryId}
-                onChange={handleCategoryChange}
-                disabled={loading}
+                onChange={(categoryId) => updateSettings({ categoryId })}
               />
-              <DifficultySelect value={settings.difficulty} onChange={handleDifficultyChange} disabled={loading} />
-              <QuestionCountSelect value={settings.amount} onChange={handleAmountChange} disabled={loading} />
+              <DifficultySelect
+                value={settings.difficulty}
+                onChange={(difficulty) => updateSettings({ difficulty })}
+              />
+              <QuestionCountSelect
+                value={settings.amount}
+                onChange={(amount) => updateSettings({ amount })}
+              />
             </Stack>
           )}
 
-          {error && <ErrorMessage kind={error} />}
+          {error && <ErrorMessage message={error} />}
         </Stack>
       </CardContent>
       <CardActions sx={{ px: 2, pb: 2, justifyContent: 'flex-end' }}>
         <Button
           variant="contained"
           size="large"
+          startIcon={<PlayArrowIcon />}
           onClick={handleStart}
-          disabled={!canStart}
-          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
-          sx={{ width: { xs: '100%', sm: 'auto' } }}
+          disabled={loading || categoriesLoading || !!categoriesError}
         >
-          {loading ? 'Kérdések betöltése…' : 'Játék indítása'}
+          {loading ? 'Betöltés...' : 'Játék indítása'}
         </Button>
       </CardActions>
     </Card>

@@ -1,59 +1,29 @@
-import { useCallback, useEffect, useState } from 'react';
-import type { ApiErrorKind, Category } from '../types/quiz';
-import { fetchCategories, isAbortError, QuizApiError } from '../utils/api';
-
-/** A useCategories hook visszatérési értéke. */
-export interface UseCategoriesResult {
-  /** A betöltött kategóriák. */
-  categories: Category[];
-  /** Folyamatban van-e a betöltés. */
-  loading: boolean;
-  /** A hiba fajtája, ha a betöltés sikertelen volt. */
-  error: ApiErrorKind | null;
-  /** A betöltés újrapróbálása. */
-  retry: () => void;
-}
+import { useEffect, useState } from 'react';
+import type { Category } from '../types/quiz';
+import { fetchCategories } from '../utils/api';
 
 /**
- * Lekéri az Open Trivia DB kategóriáit a komponens megjelenésekor.
- * @returns A kategóriák, a betöltési és hibaállapot, valamint az újrapróbáló függvény.
+ * Betölti a témaköröket az API-ból.
+ * @returns A témakörök, a betöltés és hiba állapota, és egy újrapróbáló függvény.
  */
-export function useCategories(): UseCategoriesResult {
+export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiErrorKind | null>(null);
-  // Növelésével újraindítható a lekérés
-  const [attempt, setAttempt] = useState(0);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    // A "mounted" flag megakadályozza, hogy megszűnt komponens állapotát frissítsük
-    let mounted = true;
-    const controller = new AbortController();
-
-    fetchCategories(controller.signal)
-      .then((data) => {
-        if (!mounted) return;
-        setCategories(data);
-        setError(null);
-        setLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (!mounted || isAbortError(err)) return;
-        setError(err instanceof QuizApiError ? err.kind : 'network');
-        setLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-      controller.abort();
-    };
-  }, [attempt]);
-
-  const retry = useCallback(() => {
+  function load() {
     setLoading(true);
-    setError(null);
-    setAttempt((n) => n + 1);
+    setError('');
+    fetchCategories()
+      .then((data) => setCategories(data))
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
+  }
+
+  // Csak egyszer, az első megjelenéskor töltjük be
+  useEffect(() => {
+    load();
   }, []);
 
-  return { categories, loading, error, retry };
+  return { categories, loading, error, retry: load };
 }

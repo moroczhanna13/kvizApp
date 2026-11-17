@@ -1,24 +1,17 @@
-import { memo } from 'react';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 
-/** A LoadingSpinner tulajdonságai. */
-export interface LoadingSpinnerProps {
-  /** A pörgő jelző alatt megjelenő szöveg. */
-  label?: string;
-}
-
 /**
- * Betöltésjelző forgó ikon szöveggel.
- * @param props - A komponens tulajdonságai.
- * @returns A betöltésjelző elem.
+ * Forgó betöltésjelző egy felirattal.
+ * @param props - label: a kiírt szöveg.
+ * @returns A betöltésjelző.
  */
-export const LoadingSpinner = memo(function LoadingSpinner({ label = 'Betöltés…' }: LoadingSpinnerProps) {
+export function LoadingSpinner({ label = 'Betöltés...' }: { label?: string }) {
   return (
-    <Box role="status" aria-live="polite" sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 4 }}>
-      <CircularProgress aria-label={label} />
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 4 }}>
+      <CircularProgress />
       <Typography color="text.secondary">{label}</Typography>
     </Box>
   );
-});
+}

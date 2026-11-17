@@ -1,63 +1,51 @@
-import { memo } from 'react';
-import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
-/** Egy válaszgomb megjelenési állapota. */
-export type AnswerStatus = 'idle' | 'correct' | 'wrong' | 'dimmed';
-
-/** Az AnswerButton tulajdonságai. */
-export interface AnswerButtonProps {
-  /** A válasz szövege. */
+/** Az AnswerButton props-a. */
+export type AnswerButtonProps = {
   answer: string;
-  /** A válasz sorszáma (0–3), ebből lesz az A–D betűjel. */
+  /** A válasz sorszáma, ebből lesz az A, B, C, D betű. */
   index: number;
-  /** A gomb megjelenési állapota. */
-  status: AnswerStatus;
-  /** Le van-e tiltva (visszajelzés közben). */
+  /** idle: még nincs válasz, correct: helyes, wrong: rosszat választott, dimmed: a többi. */
+  status: 'idle' | 'correct' | 'wrong' | 'dimmed';
   disabled: boolean;
-  /** Kattintáskor meghívott függvény a válasz szövegével. */
-  onSelect: (answer: string) => void;
-}
-
-/** Az állapotonkénti színek; letiltva is megmaradnak, hogy a visszajelzés látható legyen. */
-const STATUS_STYLES = {
-  idle: {},
-  correct: {
-    '&, &.Mui-disabled': { bgcolor: 'success.main', color: 'success.contrastText', borderColor: 'success.main' },
-  },
-  wrong: {
-    '&, &.Mui-disabled': { bgcolor: 'error.main', color: 'error.contrastText', borderColor: 'error.main' },
-  },
-  dimmed: { opacity: 0.6 },
-} as const;
+  onClick: () => void;
+};
 
 /**
- * Egy válaszlehetőség gombja; visszajelzéskor zöld (helyes) vagy piros (rossz) színű.
- * @param props - A komponens tulajdonságai.
- * @returns A válaszgomb elem.
+ * Egy válaszlehetőség gombja. Válasz után zöld (helyes) vagy piros (rossz) lesz.
+ * @param props - A válasz, az állapota és a kattintáskezelő.
+ * @returns A válaszgomb.
  */
-export const AnswerButton = memo(function AnswerButton({ answer, index, status, disabled, onSelect }: AnswerButtonProps) {
-  const letter = String.fromCharCode(65 + index);
-  const icon = status === 'correct' ? <CheckCircleIcon /> : status === 'wrong' ? <CancelIcon /> : undefined;
+export function AnswerButton({ answer, index, status, disabled, onClick }: AnswerButtonProps) {
+  const letter = String.fromCharCode(65 + index); // 65 = 'A'
+
+  let color = {};
+  let icon = undefined;
+  if (status === 'correct') {
+    // A Mui-disabled is kell, különben a letiltott gomb szürke lenne
+    color = { '&, &.Mui-disabled': { bgcolor: 'success.main', color: 'white' } };
+    icon = <CheckCircleIcon />;
+  } else if (status === 'wrong') {
+    color = { '&, &.Mui-disabled': { bgcolor: 'error.main', color: 'white' } };
+    icon = <CancelIcon />;
+  } else if (status === 'dimmed') {
+    color = { opacity: 0.6 };
+  }
 
   return (
     <Button
       fullWidth
       size="large"
-      variant={status === 'correct' || status === 'wrong' ? 'contained' : 'outlined'}
-      onClick={() => onSelect(answer)}
+      variant="outlined"
       disabled={disabled}
+      onClick={onClick}
       endIcon={icon}
-      sx={{ justifyContent: 'flex-start', textAlign: 'left', py: 1.5, minHeight: 64, ...STATUS_STYLES[status] }}
+      sx={{ justifyContent: 'flex-start', textAlign: 'left', minHeight: 64, ...color }}
     >
-      <Box component="span" sx={{ fontWeight: 700, mr: 1.5 }}>
-        {letter}.
-      </Box>
-      <Box component="span" sx={{ flexGrow: 1 }}>
-        {answer}
-      </Box>
+      <b style={{ marginRight: 12 }}>{letter}.</b>
+      <span style={{ flexGrow: 1 }}>{answer}</span>
     </Button>
   );
-});
+}

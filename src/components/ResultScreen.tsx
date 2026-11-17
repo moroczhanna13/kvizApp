@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -14,107 +14,80 @@ import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import ReplayIcon from '@mui/icons-material/Replay';
 import { useQuiz } from '../hooks/useQuiz';
-import { calculatePercentage } from '../utils/scoring';
 import { DIFFICULTY_LABELS } from '../utils/constants';
 
 /**
- * Az eredmény arányától függő értékelő szöveget ad.
+ * Az eredmény alapján ad egy rövid értékelést.
  * @param percent - A helyes válaszok aránya százalékban.
- * @returns Rövid magyar nyelvű értékelés.
+ * @returns Az értékelés szövege.
  */
 function getVerdict(percent: number): string {
-  if (percent >= 90) return 'Kiváló teljesítmény!';
+  if (percent >= 90) return 'Kiváló!';
   if (percent >= 70) return 'Szép munka!';
-  if (percent >= 40) return 'Nem rossz, de van még hova fejlődni.';
+  if (percent >= 40) return 'Nem rossz, de lehet még jobb.';
   return 'Legközelebb jobban megy majd!';
 }
 
 /**
- * Az eredményoldal: pontszám, helyes válaszok aránya és navigáció.
- * Megjelenéskor értesít arról, hogy az eredmény a ranglistára került.
- * @returns Az eredmény nézet.
+ * Az eredmény képernyő a játék végén: pontszám, helyes válaszok aránya, gombok.
+ * @returns Az eredmény képernyő.
  */
 export function ResultScreen() {
-  const { state, settings, dispatch, setView } = useQuiz();
+  const { score, correctCount, questions, settings, newGame, setView } = useQuiz();
   const [snackbarOpen, setSnackbarOpen] = useState(true);
-  const total = state.questions.length;
 
-  // A származtatott statisztikák csak az állapot változásakor számolódnak újra
-  const stats = useMemo(() => {
-    const percent = calculatePercentage(state.correctCount, total);
-    return { percent, verdict: getVerdict(percent) };
-  }, [state.correctCount, total]);
-
-  const handleNewGame = useCallback(() => {
-    dispatch({ type: 'RESET' });
-    setView('start');
-  }, [dispatch, setView]);
-
-  const handleLeaderboard = useCallback(() => setView('leaderboard'), [setView]);
-  const handleSnackbarClose = useCallback(() => setSnackbarOpen(false), []);
+  const total = questions.length;
+  const percent = Math.round((correctCount / total) * 100);
 
   return (
     <>
       <Card>
         <CardContent>
           <Stack spacing={3} sx={{ alignItems: 'center', textAlign: 'center' }}>
-            <EmojiEventsIcon color="warning" sx={{ fontSize: 72 }} aria-hidden="true" />
+            <EmojiEventsIcon color="warning" sx={{ fontSize: 72 }} />
             <div>
               <Typography variant="h4" component="h2" gutterBottom>
                 Vége a játéknak
               </Typography>
-              <Typography color="text.secondary">{stats.verdict}</Typography>
+              <Typography color="text.secondary">{getVerdict(percent)}</Typography>
             </div>
 
-            <Typography variant="h2" component="p" color="primary" sx={{ fontWeight: 700 }}>
-              {state.score} <Box component="span" sx={{ fontSize: '1.5rem' }}>pont</Box>
+            <Typography variant="h2" color="primary" sx={{ fontWeight: 700 }}>
+              {score} pont
             </Typography>
 
             <Box sx={{ width: '100%', maxWidth: 420 }}>
               <Stack direction="row" sx={{ justifyContent: 'space-between', mb: 1 }}>
-                <Typography>
-                  Helyes válaszok: {state.correctCount} / {total}
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{stats.percent}%</Typography>
+                <Typography>Helyes válaszok: {correctCount} / {total}</Typography>
+                <Typography sx={{ fontWeight: 700 }}>{percent}%</Typography>
               </Stack>
               <LinearProgress
                 variant="determinate"
-                value={stats.percent}
-                color={stats.percent >= 50 ? 'success' : 'error'}
-                aria-label="Helyes válaszok aránya"
+                value={percent}
+                color={percent >= 50 ? 'success' : 'error'}
                 sx={{ height: 10, borderRadius: 5 }}
               />
             </Box>
 
-            <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
-              <Chip label={state.questions[0]?.category ?? '–'} color="secondary" variant="outlined" />
+            <Stack direction="row" spacing={1}>
+              <Chip label={questions[0]?.category} color="secondary" variant="outlined" />
               <Chip label={DIFFICULTY_LABELS[settings.difficulty]} />
             </Stack>
           </Stack>
         </CardContent>
-        <CardActions sx={{ px: 2, pb: 2, justifyContent: 'center', flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
-          <Button variant="contained" startIcon={<ReplayIcon />} onClick={handleNewGame} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+        <CardActions sx={{ pb: 2, justifyContent: 'center' }}>
+          <Button variant="contained" startIcon={<ReplayIcon />} onClick={newGame}>
             Új játék
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<LeaderboardIcon />}
-            onClick={handleLeaderboard}
-            sx={{ width: { xs: '100%', sm: 'auto' }, ml: { xs: '0 !important', sm: 1 } }}
-          >
+          <Button variant="outlined" startIcon={<LeaderboardIcon />} onClick={() => setView('leaderboard')}>
             Ranglista
           </Button>
         </CardActions>
       </Card>
 
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={4000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={handleSnackbarClose} severity="success" variant="filled" sx={{ width: '100%' }}>
-          Az eredményt elmentettük.
+      <Snackbar open={snackbarOpen} autoHideDuration={4000} onClose={() => setSnackbarOpen(false)}>
+        <Alert severity="success" variant="filled" onClose={() => setSnackbarOpen(false)}>
+          Az eredményt elmentettük a ranglistára.
         </Alert>
       </Snackbar>
     </>

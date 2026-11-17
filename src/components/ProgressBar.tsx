@@ -1,34 +1,26 @@
-import { memo } from 'react';
 import Box from '@mui/material/Box';
 import LinearProgress from '@mui/material/LinearProgress';
 import Typography from '@mui/material/Typography';
 
-/** A ProgressBar tulajdonságai. */
-export interface ProgressBarProps {
-  /** Az aktuális kérdés sorszáma (1-től számozva). */
+/** A ProgressBar props-a. */
+export type ProgressBarProps = {
+  /** Hányadik kérdésnél tartunk (1-től). */
   current: number;
-  /** Az összes kérdés száma. */
   total: number;
-}
+};
 
 /**
- * A játék előrehaladását mutató sáv a kérdés sorszámával.
- * @param props - A komponens tulajdonságai.
- * @returns A haladásjelző elem.
+ * Sáv, ami mutatja, hányadik kérdésnél tart a játékos.
+ * @param props - Az aktuális kérdés sorszáma és az összes kérdés száma.
+ * @returns A haladásjelző.
  */
-export const ProgressBar = memo(function ProgressBar({ current, total }: ProgressBarProps) {
-  const percent = total > 0 ? (current / total) * 100 : 0;
+export function ProgressBar({ current, total }: ProgressBarProps) {
   return (
-    <Box sx={{ flexGrow: 1, minWidth: 160 }}>
+    <Box sx={{ flexGrow: 1 }}>
       <Typography variant="body2" color="text.secondary" gutterBottom>
         {current}. kérdés / {total}
       </Typography>
-      <LinearProgress
-        variant="determinate"
-        value={percent}
-        aria-label="Haladás a kvízben"
-        sx={{ height: 8, borderRadius: 4 }}
-      />
+      <LinearProgress variant="determinate" value={(current / total) * 100} sx={{ height: 8, borderRadius: 4 }} />
     </Box>
   );
-});
+}

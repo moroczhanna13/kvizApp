@@ -1,58 +1,31 @@
 # Kvíz alkalmazás
 
-React + TypeScript kvízjáték az [Open Trivia DB](https://opentdb.com) nyilvános kérdéseivel, Material UI felülettel.
+Kliensoldali rendszerek házi feladat. Egy kvízjáték React + TypeScript + Material UI felhasználásával, a kérdéseket az [Open Trivia DB](https://opentdb.com) nyilvános API-jából kéri le.
 
-## Telepítés és indítás
+## Indítás
 
 ```bash
 npm install
-npm run dev       # fejlesztői szerver (http://localhost:5173)
-npm run build     # típusellenőrzés + éles build a dist/ mappába
-npm run preview   # az éles build kipróbálása
-npm run lint      # statikus ellenőrzés (oxlint)
-npm run sounds    # a public/sounds/*.wav hangfájlok újragenerálása
+npm run dev
 ```
 
 ## Funkciók
 
-- Témakör (az API-ból lekérve), nehézség és kérdésszám választása a kezdőképernyőn.
-- Kérdésenként 4 válaszlehetőség, véletlen sorrendben, 15 másodperces visszaszámlálóval.
-- Azonnali visszajelzés: zöld/piros válaszgomb, üzenetsáv és hang (helyes/helytelen), majd automatikus továbblépés.
-- Pontozás: nehézség szerinti alappont (10/20/30) + a hátralévő másodpercek időbónuszként.
-- Eredményoldal pontszámmal és a helyes válaszok arányával.
-- Ranglista a 10 legjobb eredménnyel; az eredmények és az utolsó beállítások (a hangkapcsolóval együtt) a localStorage-ban maradnak meg.
-- Hibakezelés: hálózati hiba, „nincs elég kérdés” (response_code 1) és rate limit (response_code 5 / HTTP 429), mindegyikhez javaslattal.
-- Reszponzív elrendezés mobilra és asztali gépre.
+- Témakör, nehézség és kérdésszám kiválasztása (a témakörök az API-ból jönnek)
+- Kérdésenként 4 válasz véletlen sorrendben, 15 másodperc idő
+- Válasz után zöld/piros visszajelzés és hang, utána automatikusan jön a következő kérdés
+- Pontozás: nehézségtől függő alappont (10/20/30) + a megmaradt másodpercek
+- Eredmény képernyő és ranglista (top 10)
+- A beállítások és a ranglista localStorage-ban mentődnek
+- Mobilon is használható
 
-## Mappaszerkezet
+## Hookok
 
-```
-scripts/generate-sounds.mjs   WAV hangfájlok generálása Node-dal
-public/sounds/                correct.wav, wrong.wav
-src/components/               19 komponens, egy fájlban egy
-src/context/                  QuizContext (createContext) és QuizProvider
-src/hooks/                    saját hookok
-src/types/                    TypeScript típusok
-src/utils/                    API, reducer, keverés, pontozás, téma, konstansok
-```
-
-## Használt hookok
-
-| Hook | Hol |
-| --- | --- |
-| `useState` | nézet, betöltési/hibaállapot, visszaszámláló, Snackbar |
-| `useEffect` | adatlekérés, localStorage írás, időzítők |
-| `useReducer` | játékállapot (`quizReducer`: START, ANSWER, TIMEOUT, NEXT, FINISH, RESET) |
-| `useContext` | `useQuiz` → `QuizContext` |
-| `useRef` | intervallum és timeout azonosító, Audio objektumok, callbackek |
-| `useCallback` | eseménykezelők a `memo`-zott gyerekkomponensekhez |
-| `useMemo` | válaszkeverés kérdésenként egyszer, context érték, eredmény-statisztika |
-
-Saját hookok: `useLocalStorage`, `useQuestions`, `useCountdown`, `useCategories`, `useSoundEffects`, `useQuiz`.
+- `useState`, `useEffect`, `useContext`, `useMemo`, `useRef`
+- Saját hookok: `useQuiz`, `useLocalStorage`, `useCategories`, `useQuestions`, `useCountdown`, `useSoundEffects`
 
 ## Használt JS API-k
 
-- **fetch**: Open Trivia DB kategóriák és kérdések (`encode=url3986`, `decodeURIComponent`-tel dekódolva), `AbortController`-rel.
-- **localStorage**: beállítások és ranglista, alakellenőrzéssel és hibatűréssel.
-- **Audio API** (`HTMLAudioElement`): helyes/helytelen válasz hangja.
-- **Időzítők**: `setInterval` (visszaszámláló), `setTimeout` (továbblépés).
+- **fetch**: kérdések és témakörök lekérése
+- **localStorage**: beállítások és ranglista mentése
+- **Audio**: hang helyes és rossz válasznál

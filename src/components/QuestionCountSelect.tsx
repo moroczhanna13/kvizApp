@@ -1,32 +1,26 @@
-import { memo } from 'react';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import { QUESTION_COUNT_OPTIONS } from '../utils/constants';
 
-/** A QuestionCountSelect tulajdonságai. */
-export interface QuestionCountSelectProps {
-  /** A kiválasztott kérdésszám. */
+/** A QuestionCountSelect props-a. */
+export type QuestionCountSelectProps = {
   value: number;
-  /** Választáskor meghívott függvény az új kérdésszámmal. */
   onChange: (amount: number) => void;
-  /** Le van-e tiltva a mező. */
-  disabled?: boolean;
-}
+};
 
 /**
- * A kérdések számát kiválasztó legördülő lista.
- * @param props - A komponens tulajdonságai.
- * @returns A kérdésszám-választó mező.
+ * Legördülő lista a kérdések számának kiválasztásához.
+ * @param props - A kiválasztott szám és a változáskezelő.
+ * @returns A kérdésszám választó.
  */
-export const QuestionCountSelect = memo(function QuestionCountSelect({ value, onChange, disabled }: QuestionCountSelectProps) {
+export function QuestionCountSelect({ value, onChange }: QuestionCountSelectProps) {
   return (
-    <FormControl fullWidth disabled={disabled}>
-      <InputLabel id="count-select-label">Kérdések száma</InputLabel>
+    <FormControl fullWidth>
+      <InputLabel id="count-label">Kérdések száma</InputLabel>
       <Select
-        labelId="count-select-label"
-        id="count-select"
+        labelId="count-label"
         label="Kérdések száma"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
@@ -39,4 +33,4 @@ export const QuestionCountSelect = memo(function QuestionCountSelect({ value, on
       </Select>
     </FormControl>
   );
-});
+}

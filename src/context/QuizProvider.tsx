@@ -1,63 +1,97 @@
-import { useCallback, useMemo, useReducer, useState } from 'react';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { QuizContext } from './QuizContext';
-import type { QuizContextValue } from './QuizContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import type { LeaderboardEntry, QuizSettings, View } from '../types/quiz';
-import { DEFAULT_SETTINGS, LEADERBOARD_SIZE, STORAGE_KEYS } from '../utils/constants';
-import { initialQuizState, quizReducer } from '../utils/quizReducer';
-import { isLeaderboard, isQuizSettings } from '../utils/storageGuards';
-
-/** A QuizProvider tulajdonságai. */
-export interface QuizProviderProps {
-  /** A context-et használó gyerek komponensek. */
-  children: ReactNode;
-}
+import type { LeaderboardEntry, Question, QuizSettings, View } from '../types/quiz';
+import { DEFAULT_SETTINGS, DIFFICULTY_POINTS, LEADERBOARD_SIZE } from '../utils/constants';
 
 /**
- * Egyedi azonosítót készít egy ranglista-bejegyzéshez.
- * @returns Egyedi szöveges azonosító.
+ * A kvíz közös állapotát (nézet, beállítások, játék, ranglista) adja a gyerek komponenseknek.
+ * @param props - children: a context-et használó komponensek.
+ * @returns A Provider a gyerekekkel.
  */
-function createId(): string {
-  // A crypto.randomUUID csak biztonságos (https / localhost) környezetben érhető el
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-/**
- * A kvíz globális állapotát (beállítások, játékállapot, nézet, ranglista) biztosító Provider.
- * @param props - A komponens tulajdonságai.
- * @returns A context Providerrel körbevett gyerekek.
- */
-export function QuizProvider({ children }: QuizProviderProps) {
-  const [state, dispatch] = useReducer(quizReducer, initialQuizState);
+export function QuizProvider({ children }: { children: ReactNode }) {
   const [view, setView] = useState<View>('start');
-  const [settings, setSettings] = useLocalStorage<QuizSettings>(STORAGE_KEYS.settings, DEFAULT_SETTINGS, isQuizSettings);
-  const [leaderboard, setLeaderboard] = useLocalStorage<LeaderboardEntry[]>(STORAGE_KEYS.leaderboard, [], isLeaderboard);
+  const [settings, setSettings] = useLocalStorage<QuizSettings>('kvizApp.settings', DEFAULT_SETTINGS);
+  const [leaderboard, setLeaderboard] = useLocalStorage<LeaderboardEntry[]>('kvizApp.leaderboard', []);
 
-  const updateSettings = useCallback(
-    (changes: Partial<QuizSettings>) => setSettings((prev) => ({ ...prev, ...changes })),
-    [setSettings],
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [answered, setAnswered] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+
+  function updateSettings(changes: Partial<QuizSettings>) {
+    setSettings({ ...settings, ...changes });
+  }
+
+  function startQuiz(newQuestions: Question[]) {
+    setQuestions(newQuestions);
+    setCurrentIndex(0);
+    setScore(0);
+    setCorrectCount(0);
+    setAnswered(false);
+    setSelectedAnswer(null);
+    setView('quiz');
+  }
+
+  function answerQuestion(answer: string, timeLeft: number) {
+    // Egy kérdésre csak egyszer lehet válaszolni
+    if (answered) return;
+    setAnswered(true);
+    setSelectedAnswer(answer);
+
+    const question = questions[currentIndex];
+    if (answer === question.correctAnswer) {
+      // Pont = nehézség szerinti alappont + a hátralévő másodpercek
+      setScore(score + DIFFICULTY_POINTS[question.difficulty] + timeLeft);
+      setCorrectCount(correctCount + 1);
+    }
+  }
+
+  function timeUp() {
+    if (answered) return;
+    setAnswered(true);
+    setSelectedAnswer(null);
+  }
+
+  function nextQuestion() {
+    setCurrentIndex(currentIndex + 1);
+    setAnswered(false);
+    setSelectedAnswer(null);
+  }
+
+  function finishQuiz() {
+    const entry: LeaderboardEntry = {
+      id: Date.now(),
+      score,
+      correctCount,
+      total: questions.length,
+      categoryName: questions[0]?.category ?? '-',
+      difficulty: settings.difficulty,
+      date: new Date().toISOString(),
+    };
+    // Pontszám szerint csökkenő sorrend, csak a legjobb 10 marad
+    const newList = [...leaderboard, entry].sort((a, b) => b.score - a.score).slice(0, LEADERBOARD_SIZE);
+    setLeaderboard(newList);
+    setView('result');
+  }
+
+  function newGame() {
+    setQuestions([]);
+    setView('start');
+  }
+
+  return (
+    <QuizContext.Provider
+      value={{
+        view, setView, settings, updateSettings, leaderboard,
+        questions, currentIndex, score, correctCount, answered, selectedAnswer,
+        startQuiz, answerQuestion, timeUp, nextQuestion, finishQuiz, newGame,
+      }}
+    >
+      {children}
+    </QuizContext.Provider>
   );
-
-  const addResult = useCallback(
-    (entry: Omit<LeaderboardEntry, 'id' | 'date'>) => {
-      const newEntry: LeaderboardEntry = { ...entry, id: createId(), date: new Date().toISOString() };
-      // Pontszám szerint csökkenő sorrend, egyezésnél a korábbi eredmény marad elöl; csak a legjobbak maradnak meg
-      setLeaderboard((prev) =>
-        [...prev, newEntry].sort((a, b) => b.score - a.score || a.date.localeCompare(b.date)).slice(0, LEADERBOARD_SIZE),
-      );
-    },
-    [setLeaderboard],
-  );
-
-  // A context értékét memoizáljuk, hogy a fogyasztók csak valódi változáskor rendereljenek újra
-  const value = useMemo<QuizContextValue>(
-    () => ({ settings, updateSettings, state, dispatch, view, setView, leaderboard, addResult }),
-    [settings, updateSettings, state, view, leaderboard, addResult],
-  );
-
-  return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;
 }

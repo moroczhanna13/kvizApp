@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -6,68 +6,66 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { AnswerButton } from './AnswerButton';
-import type { AnswerStatus } from './AnswerButton';
+import type { AnswerButtonProps } from './AnswerButton';
 import { Timer } from './Timer';
 import { useCountdown } from '../hooks/useCountdown';
-import type { Question, QuestionPhase } from '../types/quiz';
+import type { Question } from '../types/quiz';
 import { DIFFICULTY_LABELS, QUESTION_TIME_LIMIT } from '../utils/constants';
-import { shuffleArray } from '../utils/shuffle';
 
-/** A QuestionCard tulajdonságai. */
-export interface QuestionCardProps {
-  /** A megjelenítendő kérdés. */
+/** A QuestionCard props-a. */
+export type QuestionCardProps = {
   question: Question;
-  /** A kérdés fázisa (válaszadás vagy visszajelzés). */
-  phase: QuestionPhase;
-  /** A kiválasztott válasz, ha van. */
+  answered: boolean;
   selectedAnswer: string | null;
-  /** Válaszadáskor meghívott függvény a válasszal és a hátralévő idővel. */
   onAnswer: (answer: string, timeLeft: number) => void;
-  /** Az idő lejártakor meghívott függvény. */
   onTimeout: () => void;
+};
+
+/**
+ * Összekeveri a tömb elemeit (Fisher-Yates keverés), az eredetit nem módosítja.
+ * @param items - A keverendő tömb.
+ * @returns Új, összekevert tömb.
+ */
+function shuffle(items: string[]): string[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
 }
 
 /**
- * Egy kérdés kártyája a visszaszámlálóval és a négy (összekevert) válaszgombbal.
- * Kérdésenként újra kell csatolni (key), hogy a számláló és a keverés újrainduljon.
- * @param props - A komponens tulajdonságai.
- * @returns A kérdéskártya elem.
+ * Egy kérdés kártyája a visszaszámlálóval és a négy válaszgombbal.
+ * @param props - A kérdés, a válasz állapota és az eseménykezelők.
+ * @returns A kérdés kártya.
  */
-export function QuestionCard({ question, phase, selectedAnswer, onAnswer, onTimeout }: QuestionCardProps) {
-  // Válaszkeverés: kérdésenként egyszer történik, újrarenderelésnél (pl. óraütésnél) nem változik a sorrend
+export function QuestionCard({ question, answered, selectedAnswer, onAnswer, onTimeout }: QuestionCardProps) {
+  // useMemo nélkül minden másodpercben (újrarendernél) összekeveredne a sorrend
   const answers = useMemo(
-    () => shuffleArray([question.correctAnswer, ...question.incorrectAnswers]),
+    () => shuffle([question.correctAnswer, ...question.incorrectAnswers]),
     [question],
   );
 
-  const timeLeft = useCountdown(QUESTION_TIME_LIMIT, phase === 'answering', onTimeout);
-
-  // A hátralévő időt ref-ben is tároljuk, így a kattintáskezelő nem változik másodpercenként,
-  // és a memo-zott AnswerButton-ök nem renderelnek feleslegesen újra
-  const timeLeftRef = useRef(timeLeft);
-  useEffect(() => {
-    timeLeftRef.current = timeLeft;
-  }, [timeLeft]);
-
-  const handleSelect = useCallback((answer: string) => onAnswer(answer, timeLeftRef.current), [onAnswer]);
+  const timeLeft = useCountdown(QUESTION_TIME_LIMIT, !answered, onTimeout);
 
   /**
-   * Meghatározza egy válaszgomb megjelenését az aktuális fázis alapján.
+   * Megadja, milyen színű legyen egy válaszgomb.
    * @param answer - A válasz szövege.
    * @returns A gomb állapota.
    */
-  const getStatus = (answer: string): AnswerStatus => {
-    if (phase === 'answering') return 'idle';
+  function getStatus(answer: string): AnswerButtonProps['status'] {
+    if (!answered) return 'idle';
     if (answer === question.correctAnswer) return 'correct';
     if (answer === selectedAnswer) return 'wrong';
     return 'dimmed';
-  };
+  }
 
   return (
     <Card>
       <CardContent>
         <Stack spacing={2}>
-          <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
               <Chip label={question.category} size="small" color="secondary" variant="outlined" />
               <Chip label={DIFFICULTY_LABELS[question.difficulty]} size="small" />
@@ -75,19 +73,19 @@ export function QuestionCard({ question, phase, selectedAnswer, onAnswer, onTime
             <Timer timeLeft={timeLeft} total={QUESTION_TIME_LIMIT} />
           </Stack>
 
-          <Typography variant="h5" component="h2" sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }}>
+          <Typography variant="h5" component="h2">
             {question.question}
           </Typography>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
             {answers.map((answer, index) => (
               <AnswerButton
-                key={`${index}-${answer}`}
+                key={answer}
                 answer={answer}
                 index={index}
                 status={getStatus(answer)}
-                disabled={phase !== 'answering'}
-                onSelect={handleSelect}
+                disabled={answered}
+                onClick={() => onAnswer(answer, timeLeft)}
               />
             ))}
           </Box>
